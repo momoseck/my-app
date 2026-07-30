@@ -1,0 +1,53 @@
+### Sample HTTP requests for the Todolist API
+### Works with the IntelliJ HTTP client or the VS Code "REST Client" extension.
+
+@host = http://localhost:8080
+
+### API info
+GET {{host}}/
+
+### Health check
+GET {{host}}/actuator/health
+
+### Create a todo
+POST {{host}}/api/todos
+Content-Type: application/json
+
+{
+  "title": "Deploy the app to the VPS",
+  "description": "Run docker compose up on the server",
+  "priority": "HIGH",
+  "dueDate": "2026-08-15"
+}
+
+### List todos (paged, newest first)
+GET {{host}}/api/todos?page=0&size=20&sort=createdAt&direction=desc
+
+### Filter: only open, high priority, text search
+GET {{host}}/api/todos?completed=false&priority=HIGH&search=deploy
+
+### Get one todo
+GET {{host}}/api/todos/1
+
+### Full update (PUT)
+PUT {{host}}/api/todos/1
+Content-Type: application/json
+
+{
+  "title": "Deploy the app to the VPS",
+  "description": "Done via docker compose",
+  "completed": true,
+  "priority": "MEDIUM",
+  "dueDate": "2026-08-15"
+}
+
+### Partial update (PATCH) - just toggle completed
+PATCH {{host}}/api/todos/1
+Content-Type: application/json
+
+{
+  "completed": true
+}
+
+### Delete a todo
+DELETE {{host}}/api/todos/1

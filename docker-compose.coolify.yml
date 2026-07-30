@@ -1,0 +1,57 @@
+# ----------------------------------------------------------------------
+# Compose destiné à un déploiement via COOLIFY.
+#
+# Différences avec docker-compose.yml (déploiement manuel) :
+#   - PAS de service nginx : Coolify fournit déjà un reverse proxy (Traefik)
+#     avec HTTPS/Let's Encrypt automatique.
+#   - AUCUN port publié sur l'hôte : c'est le proxy de Coolify qui route le
+#     trafic vers le service "app" (port 8080) via le domaine que tu définis.
+#   - Le domaine + le certificat TLS sont gérés par la variable magique
+#     SERVICE_FQDN_APP_8080 (voir docs/DEPLOY-COOLIFY.md).
+#
+# Dans Coolify, règle "Docker Compose Location" sur : docker-compose.coolify.yml
+# ----------------------------------------------------------------------
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-todolist}
+      POSTGRES_USER: ${POSTGRES_USER:-todolist}
+      # Défini dans l'onglet "Environment Variables" de Coolify.
+      # Astuce : mettre la valeur $SERVICE_PASSWORD_POSTGRES pour laisser
+      # Coolify générer un mot de passe fort automatiquement.
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-todolist} -d ${POSTGRES_DB:-todolist}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # Variable magique Coolify : génère le domaine public + le certificat TLS
+      # et route le trafic HTTPS vers le port 8080 de ce service.
+      SERVICE_FQDN_APP_8080: ${SERVICE_FQDN_APP_8080}
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/${POSTGRES_DB:-todolist}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-todolist}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
+      # Renseigne ici ton domaine public si tu veux restreindre le CORS.
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-*}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    expose:
+      - "8080"
+
+volumes:
+  db-data:
