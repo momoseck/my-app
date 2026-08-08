@@ -1,0 +1,54 @@
+# ----------------------------------------------------------------------
+# Compose Coolify utilisant une base PostgreSQL DÉJÀ créée dans Coolify.
+#
+# Le service "db" a été retiré : l'application se connecte à ta base Coolify
+# existante. À utiliser à la place de docker-compose.coolify.yml.
+#
+# Réglages à faire dans Coolify (voir aussi docs/DEPLOY-COOLIFY.md) :
+#
+#   1. Ressource de l'app -> Advanced :
+#        - "Connect To Predefined Network"  = ON   (indispensable : met l'app
+#          sur le réseau "coolify" où se trouve ta base)
+#        - "Consistent Container Names"     = ON   (recommandé)
+#
+#   2. Sur la page de ta base Postgres, copie "Postgres URL (internal)"
+#        postgresql://UTILISATEUR:MOTDEPASSE@HOTE-INTERNE:5432/NOMDB
+#
+#   3. Onglet "Environment Variables" de l'app -> renseigne (format JDBC) :
+#        SPRING_DATASOURCE_URL=jdbc:postgresql://HOTE-INTERNE:5432/NOMDB
+#        SPRING_DATASOURCE_USERNAME=UTILISATEUR
+#        SPRING_DATASOURCE_PASSWORD=MOTDEPASSE
+#
+#   4. "Docker Compose Location" = docker-compose.coolify-external-db.yml
+# ----------------------------------------------------------------------
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      # Domaine public + HTTPS automatique gérés par Coolify (port 8080).
+      SERVICE_FQDN_APP_8080: ${SERVICE_FQDN_APP_8080}
+      SPRING_PROFILES_ACTIVE: prod
+      # Connexion à la base Coolify existante (valeurs définies dans l'UI).
+      SPRING_DATASOURCE_URL: ${SPRING_DATASOURCE_URL}
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+      APP_CORS_ALLOWED_ORIGINS: ${APP_CORS_ALLOWED_ORIGINS:-*}
+      JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
+    expose:
+      - "8080"
+
+# Si le toggle "Connect To Predefined Network" ne suffit pas dans ta version de
+# Coolify, décommente ce bloc pour rattacher explicitement l'app au réseau
+# partagé "coolify" :
+#
+# networks:
+#   coolify:
+#     external: true
+#
+# et ajoute sous le service app :
+#     networks:
+#       - coolify
