@@ -6,20 +6,19 @@
 #
 # Réglages à faire dans Coolify (voir aussi docs/DEPLOY-COOLIFY.md) :
 #
-#   1. Ressource de l'app -> Advanced :
-#        - "Connect To Predefined Network"  = ON   (indispensable : met l'app
-#          sur le réseau "coolify" où se trouve ta base)
-#        - "Consistent Container Names"     = ON   (recommandé)
-#
-#   2. Sur la page de ta base Postgres, copie "Postgres URL (internal)"
+#   1. Sur la page de ta base Postgres, copie "Postgres URL (internal)"
 #        postgresql://UTILISATEUR:MOTDEPASSE@HOTE-INTERNE:5432/NOMDB
 #
-#   3. Onglet "Environment Variables" de l'app -> renseigne (format JDBC) :
+#   2. Onglet "Environment Variables" de l'app -> renseigne (format JDBC) :
 #        SPRING_DATASOURCE_URL=jdbc:postgresql://HOTE-INTERNE:5432/NOMDB
 #        SPRING_DATASOURCE_USERNAME=UTILISATEUR
 #        SPRING_DATASOURCE_PASSWORD=MOTDEPASSE
 #
-#   4. "Docker Compose Location" = docker-compose.coolify-external-db.yml
+#   3. "Docker Compose Location" = docker-compose.coolify-external-db.yml
+#
+# Le rattachement au réseau partagé "coolify" est explicite ci-dessous, donc
+# l'app peut résoudre le nom d'hôte interne de la base sans dépendre du toggle
+# "Connect To Predefined Network".
 # ----------------------------------------------------------------------
 
 services:
@@ -40,15 +39,11 @@ services:
       JAVA_OPTS: ${JAVA_OPTS:--Xms256m -Xmx512m}
     expose:
       - "8080"
+    networks:
+      - coolify
 
-# Si le toggle "Connect To Predefined Network" ne suffit pas dans ta version de
-# Coolify, décommente ce bloc pour rattacher explicitement l'app au réseau
-# partagé "coolify" :
-#
-# networks:
-#   coolify:
-#     external: true
-#
-# et ajoute sous le service app :
-#     networks:
-#       - coolify
+# Rattache l'app au réseau partagé "coolify" (où vivent les bases Coolify),
+# afin que le nom d'hôte interne de la base soit résoluble.
+networks:
+  coolify:
+    external: true
